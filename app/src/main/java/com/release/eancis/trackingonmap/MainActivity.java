@@ -2,10 +2,10 @@ package com.release.eancis.trackingonmap;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -15,7 +15,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.Switch;
-
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -26,8 +25,13 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
     private static final String TAG = MainActivity.class.getSimpleName();
@@ -36,8 +40,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private View mLayout;
     private FusedLocationProviderClient mFusedLocationClient;
     private LocationCallback mLocationCallback;
-    private LatLng mLastKnownLatLng;
     private boolean isChecked = false;
+    private LatLng mLastKnownLatLng;
+    private List<Polyline> mGpsTracksList;
 
     private static final int LOCATION_REQUEST_CODE = 101;
 
@@ -69,6 +74,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 }
             }
         };
+
+        mGpsTracksList = new ArrayList<Polyline>();
     }
 
     /**
@@ -168,20 +175,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
- /*   @Override
-    public void onResume() {
-        super.onResume();
-        //To start the coordinates updating when the activity turns in foreground
-        startLocationUpdates();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        //To stop the coordinates updating when the activity goes in background
-        stopLocationUpdates();
-    }*/
-
     protected void startLocationUpdates() {
         //LocationRequest objects are used to request a quality of service for location updates from the FusedLocationProviderClient.
         LocationRequest locationRequest = new LocationRequest();
@@ -210,11 +203,24 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      * It update map anc camera with the new coordinates
      * */
     private void updateUI(Location location){
-            mLastKnownLatLng = new LatLng(location.getLatitude(), location.getLongitude());
-            mMap.moveCamera(CameraUpdateFactory.newLatLng(mLastKnownLatLng));
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mLastKnownLatLng, getResources().getInteger(R.integer.default_zoom_value)));
+        if(isChecked) {
+            LatLng lastKnownLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(lastKnownLatLng));
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(lastKnownLatLng, getResources().getInteger(R.integer.default_zoom_value)));
+
+            updateTrack(lastKnownLatLng);
+        }
     }
 
+    /**
+     * It's to draw and update the path on the map
+     * */
+    private void updateTrack(LatLng lastKnownLatLng){
+        int lastTrackIndex = mGpsTracksList.size();
+        List<LatLng> points = mGpsTracksList.get(lastTrackIndex - 1).getPoints();
+        points.add(lastKnownLatLng);
+        mGpsTracksList.get(lastTrackIndex - 1).setPoints(points);
+    }
     /**
      * It handles the action bar menu
      * */
@@ -249,6 +255,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         isChecked = isSwitchChecked;
 
         if (isSwitchChecked) {
+            //It creates a random different color for each track recorded to perceive
+            Random rnd = new Random();
+            int color = Color.argb(255, rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256));
+
+            PolylineOptions polylineOptions = new PolylineOptions();
+            polylineOptions.color(color);
+            polylineOptions.width(getResources().getInteger(R.integer.track_width));
+            Polyline gpsTrack = mMap.addPolyline(polylineOptions);
+            mGpsTracksList.add(gpsTrack);
             startLocationUpdates();
         }
         else{
