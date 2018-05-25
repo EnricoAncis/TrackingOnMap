@@ -11,6 +11,9 @@ import android.util.Log;
 import android.view.View;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -26,6 +29,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleMap mMap;
     private View mLayout;
     private FusedLocationProviderClient mFusedLocationClient;
+    private LocationCallback mLocationCallback;
+    private LatLng mLastKnownLatLng;
 
     private static final int LOCATION_REQUEST_CODE = 101;
 
@@ -41,7 +46,22 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+        //it's entry point for interacting with the fused location provider
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        //Used for receiving notifications from the FusedLocationProviderClient when the device location
+        // has changed or can no longer be determined
+        mLocationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if (locationResult == null) {
+                    return;
+                }
+                for (Location location : locationResult.getLocations()) {
+                    updateUI(location);
+                }
+            }
+        };
     }
 
     /**
@@ -77,9 +97,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                         public void onSuccess(Location location) {
                             // Got last known location. In some rare situations this can be null.
                             if (location != null) {
-                                LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
-                                mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocation));
-                                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, getResources().getInteger(R.integer.default_zoom_value)));
+                                updateUI(location);
                             }
                         }
                     });
@@ -141,7 +159,52 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 break;
 
         }
-
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        //To start the coordinates updating when the activity turns in foreground
+        startLocationUpdates();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        //To stop the coordinates updating when the activity goes in background
+        stopLocationUpdates();
+    }
+
+    protected void startLocationUpdates() {
+        //LocationRequest objects are used to request a quality of service for location updates from the FusedLocationProviderClient.
+        LocationRequest locationRequest = new LocationRequest();
+        locationRequest.setInterval(getResources().getInteger(R.integer.map_interval_update_rate));
+        locationRequest.setFastestInterval(getResources().getInteger(R.integer.map_fastest_interval_update_rate));
+        locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+
+        //New permission requirement it's needed before requestLocationUpdates to be sure to have permissions
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            //Location permission has not been granted
+            requestLocationPermission();
+        }
+        else {
+            //Location permissions is already available, it's possible to retrieve updates
+            mFusedLocationClient.requestLocationUpdates(locationRequest, mLocationCallback,null);
+        }
+    }
+
+    protected void stopLocationUpdates() {
+        //Stop updates
+        mFusedLocationClient.removeLocationUpdates(mLocationCallback);
+    }
+
+    /**
+     * It update map anc camera with the new coordinates
+     * */
+    private void updateUI(Location location){
+            mLastKnownLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(mLastKnownLatLng));
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mLastKnownLatLng, getResources().getInteger(R.integer.default_zoom_value)));
+    }
 }

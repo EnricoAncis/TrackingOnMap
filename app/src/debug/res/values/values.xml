@@ -3,4 +3,6 @@
 
     <!-- Maps default settings -->
     <integer name="default_zoom_value">15</integer>
+    <integer name="map_interval_update_rate">10000</integer>
+    <integer name="map_fastest_interval_update_rate">10</integer>
 </resources>
