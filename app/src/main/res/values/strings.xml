@@ -1,10 +1,13 @@
 <resources>
     <string name="app_name">Tracking On Map</string>
-    <string name="title_activity_main">Map</string>
+    <string name="title_activity_main">Map tracking</string>
 
     <!-- Location permission requirements -->
     <string name="ok_btn">OK</string>
     <string name="permission_location_rationale">Location permission is needed to show the map.</string>
     <string name="locatin_not_granted">Location permissions were not granted.</string>
     <string name="locatin_granted">Location permissions granted.</string>
+
+    <!-- Map menu -->
+    <string name="switch_tracking">Tracking</string>
 </resources>

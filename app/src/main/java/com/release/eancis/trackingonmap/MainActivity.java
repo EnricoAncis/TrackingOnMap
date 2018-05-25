@@ -7,8 +7,14 @@ import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
+import android.widget.CompoundButton;
+import android.widget.Switch;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -23,7 +29,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
 
-public class MainActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
     private static final String TAG = MainActivity.class.getSimpleName();
 
     private GoogleMap mMap;
@@ -31,6 +37,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private FusedLocationProviderClient mFusedLocationClient;
     private LocationCallback mLocationCallback;
     private LatLng mLastKnownLatLng;
+    private boolean isChecked = false;
 
     private static final int LOCATION_REQUEST_CODE = 101;
 
@@ -161,7 +168,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    @Override
+ /*   @Override
     public void onResume() {
         super.onResume();
         //To start the coordinates updating when the activity turns in foreground
@@ -173,7 +180,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         super.onPause();
         //To stop the coordinates updating when the activity goes in background
         stopLocationUpdates();
-    }
+    }*/
 
     protected void startLocationUpdates() {
         //LocationRequest objects are used to request a quality of service for location updates from the FusedLocationProviderClient.
@@ -206,5 +213,47 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             mLastKnownLatLng = new LatLng(location.getLatitude(), location.getLongitude());
             mMap.moveCamera(CameraUpdateFactory.newLatLng(mLastKnownLatLng));
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mLastKnownLatLng, getResources().getInteger(R.integer.default_zoom_value)));
+    }
+
+    /**
+     * It handles the action bar menu
+     * */
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        /* Use AppCompatActivity's method getMenuInflater to get a handle on the menu inflater */
+        MenuInflater inflater = getMenuInflater();
+        /* Use the inflater's inflate method to inflate our menu layout to this menu */
+        inflater.inflate(R.menu.map_menu, menu);
+        /* Return true so that the menu is displayed in the Toolbar */
+        MenuItem item = (MenuItem) menu.findItem(R.id.action_recoder);
+
+        item.setActionView(R.layout.recorder_switch);
+
+        Switch recorderSwitch = (Switch) item.getActionView().findViewById(R.id.recorder_switch);
+        recorderSwitch.setChecked(isChecked);
+
+        recorderSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView,
+                                         boolean switchIsChecked) {
+
+                trackRecorder(switchIsChecked);
+            }
+        });
+
+        return true;
+    }
+
+    private void trackRecorder(boolean isSwitchChecked){
+
+        isChecked = isSwitchChecked;
+
+        if (isSwitchChecked) {
+            startLocationUpdates();
+        }
+        else{
+            stopLocationUpdates();
+        }
+
     }
 }

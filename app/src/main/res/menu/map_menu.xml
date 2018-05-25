@@ -1,0 +1,18 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".Mapsctivity">
+
+    <item
+        android:id="@+id/action_recoder"
+        android:checkable="true"
+        android:enabled="true"
+        android:orderInCategory="1"
+        android:title="@string/switch_tracking"
+        android:titleCondensed="@string/switch_tracking"
+        android:tooltipText="@string/switch_tracking"
+        android:visible="true"
+        app:actionLayout="@layout/recorder_switch"
+        app:showAsAction="ifRoom" />
+
+</menu>
