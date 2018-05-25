@@ -47,8 +47,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     /**
      * Manipulates the map once available.
      * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
+     * This is where we can add markers or lines, add listeners or move the camera. In this case.
      * If Google Play services is not installed on the device, the user will be prompted to install
      * it inside the SupportMapFragment. This method will only be triggered once the user has
      * installed Google Play services and returned to the app.
@@ -80,7 +79,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                             if (location != null) {
                                 LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
                                 mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocation));
-                                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, R.integer.default_zoom_value));
+                                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, getResources().getInteger(R.integer.default_zoom_value)));
                             }
                         }
                     });
@@ -92,6 +91,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     /**
      * Requests the Location permission.
+     * It's mandatory to handle permission requirements in runtime from Android 6 (Marshmallow).
      * If the permission has been denied previously, a SnackBar will prompt the user to grant the
      * permission, otherwise it is requested directly.
      */
@@ -118,6 +118,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 LOCATION_REQUEST_CODE);
     }
 
+    /**
+     * It gets the user answer about permissione requirements from the Snackbar
+     * **/
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         switch (requestCode) {
