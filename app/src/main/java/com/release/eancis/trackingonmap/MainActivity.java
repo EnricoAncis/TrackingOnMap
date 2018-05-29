@@ -2,30 +2,47 @@ package com.release.eancis.trackingonmap;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
-
+import android.widget.CompoundButton;
+import android.widget.Switch;
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
 
-public class MainActivity extends FragmentActivity implements OnMapReadyCallback {
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
     private static final String TAG = MainActivity.class.getSimpleName();
 
     private GoogleMap mMap;
     private View mLayout;
     private FusedLocationProviderClient mFusedLocationClient;
+    private LocationCallback mLocationCallback;
+    private boolean isChecked = false;
+    private LatLng mLastKnownLatLng;
+    private List<Polyline> mGpsTracksList;
 
     private static final int LOCATION_REQUEST_CODE = 101;
 
@@ -41,14 +58,30 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+        //it's entry point for interacting with the fused location provider
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        //Used for receiving notifications from the FusedLocationProviderClient when the device location
+        // has changed or can no longer be determined
+        mLocationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if (locationResult == null) {
+                    return;
+                }
+                for (Location location : locationResult.getLocations()) {
+                    updateUI(location);
+                }
+            }
+        };
+
+        mGpsTracksList = new ArrayList<Polyline>();
     }
 
     /**
      * Manipulates the map once available.
      * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
+     * This is where we can add markers or lines, add listeners or move the camera. In this case.
      * If Google Play services is not installed on the device, the user will be prompted to install
      * it inside the SupportMapFragment. This method will only be triggered once the user has
      * installed Google Play services and returned to the app.
@@ -78,9 +111,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                         public void onSuccess(Location location) {
                             // Got last known location. In some rare situations this can be null.
                             if (location != null) {
-                                LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
-                                mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocation));
-                                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, R.integer.default_zoom_value));
+                                updateUI(location);
                             }
                         }
                     });
@@ -92,6 +123,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     /**
      * Requests the Location permission.
+     * It's mandatory to handle permission requirements in runtime from Android 6 (Marshmallow).
      * If the permission has been denied previously, a SnackBar will prompt the user to grant the
      * permission, otherwise it is requested directly.
      */
@@ -118,6 +150,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 LOCATION_REQUEST_CODE);
     }
 
+    /**
+     * It gets the user answer about permissione requirements from the Snackbar
+     * **/
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         switch (requestCode) {
@@ -138,7 +173,102 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 break;
 
         }
-
     }
 
+    protected void startLocationUpdates() {
+        //LocationRequest objects are used to request a quality of service for location updates from the FusedLocationProviderClient.
+        LocationRequest locationRequest = new LocationRequest();
+        locationRequest.setInterval(getResources().getInteger(R.integer.map_interval_update_rate));
+        locationRequest.setFastestInterval(getResources().getInteger(R.integer.map_fastest_interval_update_rate));
+        locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+
+        //New permission requirement it's needed before requestLocationUpdates to be sure to have permissions
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            //Location permission has not been granted
+            requestLocationPermission();
+        }
+        else {
+            //Location permissions is already available, it's possible to retrieve updates
+            mFusedLocationClient.requestLocationUpdates(locationRequest, mLocationCallback,null);
+        }
+    }
+
+    protected void stopLocationUpdates() {
+        //Stop updates
+        mFusedLocationClient.removeLocationUpdates(mLocationCallback);
+    }
+
+    /**
+     * It update map anc camera with the new coordinates
+     * */
+    private void updateUI(Location location){
+        if(isChecked) {
+            LatLng lastKnownLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(lastKnownLatLng));
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(lastKnownLatLng, getResources().getInteger(R.integer.default_zoom_value)));
+
+            updateTrack(lastKnownLatLng);
+        }
+    }
+
+    /**
+     * It's to draw and update the path on the map
+     * */
+    private void updateTrack(LatLng lastKnownLatLng){
+        int lastTrackIndex = mGpsTracksList.size();
+        List<LatLng> points = mGpsTracksList.get(lastTrackIndex - 1).getPoints();
+        points.add(lastKnownLatLng);
+        mGpsTracksList.get(lastTrackIndex - 1).setPoints(points);
+    }
+    /**
+     * It handles the action bar menu
+     * */
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        /* Use AppCompatActivity's method getMenuInflater to get a handle on the menu inflater */
+        MenuInflater inflater = getMenuInflater();
+        /* Use the inflater's inflate method to inflate our menu layout to this menu */
+        inflater.inflate(R.menu.map_menu, menu);
+        /* Return true so that the menu is displayed in the Toolbar */
+        MenuItem item = (MenuItem) menu.findItem(R.id.action_recoder);
+
+        item.setActionView(R.layout.recorder_switch);
+
+        Switch recorderSwitch = (Switch) item.getActionView().findViewById(R.id.recorder_switch);
+        recorderSwitch.setChecked(isChecked);
+
+        recorderSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView,
+                                         boolean switchIsChecked) {
+
+                trackRecorder(switchIsChecked);
+            }
+        });
+
+        return true;
+    }
+
+    private void trackRecorder(boolean isSwitchChecked){
+
+        isChecked = isSwitchChecked;
+
+        if (isSwitchChecked) {
+            //It creates a random different color for each track recorded to perceive
+            Random rnd = new Random();
+            int color = Color.argb(255, rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256));
+
+            PolylineOptions polylineOptions = new PolylineOptions();
+            polylineOptions.color(color);
+            polylineOptions.width(getResources().getInteger(R.integer.track_width));
+            Polyline gpsTrack = mMap.addPolyline(polylineOptions);
+            mGpsTracksList.add(gpsTrack);
+            startLocationUpdates();
+        }
+        else{
+            stopLocationUpdates();
+        }
+
+    }
 }
