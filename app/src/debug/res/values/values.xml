@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <integer name="default_zoom_value">20</integer>
+
+    <!-- Maps default settings -->
+    <integer name="default_zoom_value">15</integer>
+
+    <integer name="map_interval_update_rate">10000</integer>
+    <integer name="map_fastest_interval_update_rate">10</integer>
+    <integer name="track_width">8</integer>
+
+    <!-- Default color settings -->
+    <integer name="color_alpha">255</integer>
+    <integer name="color_component">256</integer>
 </resources>

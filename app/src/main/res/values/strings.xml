@@ -7,4 +7,12 @@
     <string name="permission_location_rationale">Location permission is needed to show the map.</string>
     <string name="locatin_not_granted">Location permissions were not granted.</string>
     <string name="locatin_granted">Location permissions granted.</string>
+
+    <!-- Map menu -->
+    <string name="switch_tracking">Tracking</string>
+
+    <!-- SharedPreferences variables -->
+    <string name="share_preferences_is_checked">isChecked</string>
+    <string name="share_preferences_last_track_id">lastTrackId</string>
+    <string name="share_preferences_zoom_level">zoomLevel</string>
 </resources>

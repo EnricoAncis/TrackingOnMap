@@ -7,6 +7,7 @@
          this require permission to the System .
     -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <!--
          From the targets of the app it's needed a fine approximaton on the map,
@@ -32,8 +33,8 @@
             android:value="@string/google_maps_key" />
 
         <activity
-            android:name=".MainActivity"
-            android:label="@string/title_activity_main">
+            android:name=".views.MainActivity"
+            android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
